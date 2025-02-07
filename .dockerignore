@@ -1,0 +1,13 @@
+# Ignore Go binary
+main
+
+# Ignore the vendor folder
+/vendor
+
+# Ignore test files
+*.test
+
+# Ignore IDE and OS files
+.idea
+.vscode
+*.swp
