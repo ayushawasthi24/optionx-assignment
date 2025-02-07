@@ -8,7 +8,6 @@ import (
 
 // NewServer initializes a new WebSocket server.
 func NewServer() *Server {
-	// Return a new Server instance with initialized fields
 	return &Server{
 		Clients:   make(map[string]*Client),
 		Usernames: make(map[string]bool),
