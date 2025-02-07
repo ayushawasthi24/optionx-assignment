@@ -158,7 +158,7 @@ The server handles various error scenarios:
 ## Details
 
 - Ayush Kumar Awasthi
-- [Email](ayushawasthi2409.gmail.com)
+- [Email](mailto:ayushawasthi2409.gmail.com)
 - Phone Number : 9756798580
 
 ## Acknowledgments
