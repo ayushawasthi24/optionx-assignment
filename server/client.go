@@ -8,7 +8,7 @@ import (
 type Client struct {
 	ID       string
 	Username string
-	Conn     *websocket.Conn
-	Send     chan []byte
-	Active   chan struct{}
+	Conn     *websocket.Conn // WebSocket connection instance associated with the client
+	Send     chan []byte     // Channel for sending messages to the client
+	Active   chan struct{}   // Channel to track the client's activity
 }
