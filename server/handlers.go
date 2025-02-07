@@ -22,7 +22,7 @@ func (s *Server) BroadcastWelcomeMessage(client *Client) {
 		ClientList:   clientList,
 	}
 	msg, _ := json.Marshal(welcomeMsg)
-	client.Send <- msg // Send the message to the client's 'Send' channel
+	client.Send <- msg
 }
 
 // AddClient adds a new client to the server's client map
@@ -34,11 +34,11 @@ func (s *Server) AddClient(client *Client) {
 
 // RemoveClient removes a client from the server and closes their connection
 func (s *Server) RemoveClient(client *Client) {
-	s.ClientsMu.Lock() // Lock the Clients map to ensure safe concurrent access
+	s.ClientsMu.Lock()
 	delete(s.Clients, client.ID)
 	delete(s.Usernames, client.Username)
-	s.ClientsMu.Unlock() // Unlock the Clients map
-	client.Conn.Close()  // Close the client's WebSocket connection
+	s.ClientsMu.Unlock()
+	client.Conn.Close()
 }
 
 // HandleConnections handles incoming WebSocket connections and sets up client communication
@@ -49,7 +49,7 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 		log.Println("Upgrade error:", err)
 		return
 	}
-	clientID := uuid.New().String() // Generate a unique client ID for the client
+	clientID := uuid.New().String()
 	username := s.generateUsername()
 	client := &Client{
 		ID:       clientID,
@@ -59,10 +59,10 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 		Active:   make(chan struct{}, 1),
 	}
 
-	s.AddClient(client)               // Add the client to the server's client map
+	s.AddClient(client)
 	go s.writePump(client)            // Start the writePump in a separate goroutine to send messages
 	go s.readPump(client)             // Start the readPump in a separate goroutine to listen for incoming messages
-	s.BroadcastWelcomeMessage(client) // Send a welcome message to the new client
+	s.BroadcastWelcomeMessage(client)
 
 	// Broadcast a join message
 	joinMsg := fmt.Sprintf("%s has joined the server", client.Username)
@@ -75,7 +75,7 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 // readPump reads incoming WebSocket messages from the client
 func (s *Server) readPump(c *Client) {
-	defer s.RemoveClient(c) // Ensure client is removed when readPump ends
+	defer s.RemoveClient(c)
 
 	c.Conn.SetReadDeadline(time.Now().Add(30 * time.Second)) // Set a read deadline for the WebSocket connection
 	c.Conn.SetPongHandler(func(string) error {               // Set a pong handler to handle ping messages
@@ -85,7 +85,6 @@ func (s *Server) readPump(c *Client) {
 	})
 
 	for {
-		// Read the incoming message
 		_, msg, err := c.Conn.ReadMessage()
 		if err != nil {
 			log.Println("Read error:", err)
@@ -93,14 +92,13 @@ func (s *Server) readPump(c *Client) {
 		}
 		var message Message
 		if err := json.Unmarshal(msg, &message); err != nil {
-			log.Println("JSON decode error:", err) // Log if the message is not valid JSON
+			log.Println("JSON decode error:", err)
 			continue
 		}
 
 		// Handle private and broadcast messages
 		s.ClientsMu.Lock()
 		if message.Type == "private" {
-			// Send the message to the recipient of a private message
 			for _, recipient := range s.Clients {
 				if recipient.ID == message.Receiver {
 					recipient.Send <- msg
@@ -108,7 +106,6 @@ func (s *Server) readPump(c *Client) {
 				}
 			}
 		} else if message.Type == "broadcast" {
-			// Broadcast the message to all clients except the sender
 			for _, recipient := range s.Clients {
 				if recipient.ID != c.ID {
 					recipient.Send <- msg
@@ -129,8 +126,8 @@ func (s *Server) writePump(c *Client) {
 
 	for {
 		select {
-		case msg, ok := <-c.Send: // Wait for a message to send
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second)) // Set a write deadline
+		case msg, ok := <-c.Send:
+			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if !ok {
 				return
 			}
@@ -139,7 +136,6 @@ func (s *Server) writePump(c *Client) {
 		case <-ticker.C: // Send a ping message every 10 seconds
 			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				// If the ping fails, it indicates the client is disconnected
 				s.ClientsMu.Lock()
 				log.Printf("Ping error: %v", err)
 				// Broadcast a leave message
@@ -149,7 +145,6 @@ func (s *Server) writePump(c *Client) {
 						client.Send <- []byte(leaveMsg)
 					}
 				}
-				// Remove the client
 				delete(s.Clients, c.ID)
 				delete(s.Usernames, c.Username)
 
@@ -163,7 +158,6 @@ func (s *Server) writePump(c *Client) {
 	}
 }
 
-// getClientList returns a list of all connected clients' usernames, excluding the specified client
 func (s *Server) getClientList(excludeID string) []string {
 	s.ClientsMu.RLock()
 	defer s.ClientsMu.RUnlock()
@@ -176,7 +170,6 @@ func (s *Server) getClientList(excludeID string) []string {
 	return list
 }
 
-// generateUsername generates a random username using the gofakeit package
 func (s *Server) generateUsername() string {
 	return gofakeit.Username()
 }
