@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -58,6 +59,13 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	go s.writePump(client)
 	go s.readPump(client)
 	s.BroadcastWelcomeMessage(client)
+	// Broadcast a join message
+	joinMsg := fmt.Sprintf("%s has joined the server", client.Username)
+	for _, c := range s.Clients {
+		if c.ID != client.ID {
+			c.Send <- []byte(joinMsg)
+		}
+	}
 }
 
 func (s *Server) readPump(c *Client) {
@@ -120,6 +128,22 @@ func (s *Server) writePump(c *Client) {
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+
+				s.ClientsMu.Lock()
+				log.Printf("Ping error: %v", err)
+				// Broadcast a leave message
+				leaveMsg := fmt.Sprintf("%s has left the server", c.Username)
+				for _, client := range s.Clients {
+					if client.ID != c.ID {
+						client.Send <- []byte(leaveMsg)
+					}
+				}
+				// Remove the client
+				delete(s.Clients, c.ID)
+				delete(s.Usernames, c.Username)
+
+				s.ClientsMu.Unlock()
+
 				return
 			}
 
@@ -134,7 +158,7 @@ func (s *Server) getClientList(excludeID string) []string {
 	var list []string
 	for id, client := range s.Clients {
 		if id != excludeID {
-			list = append(list, client.ID)
+			list = append(list, client.Username)
 		}
 	}
 	return list
