@@ -45,7 +45,7 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sessionID := uuid.New().String()
-	username := s.generateUniqueUsername()
+	username := s.generateUsername()
 	client := &Client{
 		ID:       sessionID,
 		Username: username,
@@ -85,7 +85,7 @@ func (s *Server) readPump(c *Client) {
 		s.ClientsMu.Lock()
 		if message.Type == "private" {
 			for _, recipient := range s.Clients {
-				if recipient.Username == message.Receiver {
+				if recipient.ID == message.Receiver {
 					recipient.Send <- msg
 					break
 				}
@@ -134,23 +134,12 @@ func (s *Server) getClientList(excludeID string) []string {
 	var list []string
 	for id, client := range s.Clients {
 		if id != excludeID {
-			list = append(list, client.Username)
+			list = append(list, client.ID)
 		}
 	}
 	return list
 }
 
-func (s *Server) generateUniqueUsername() string {
-	for {
-		username := gofakeit.Username()
-		s.ClientsMu.RLock()
-		if !s.Usernames[username] {
-			s.ClientsMu.RUnlock()
-			s.ClientsMu.Lock()
-			s.Usernames[username] = true
-			s.ClientsMu.Unlock()
-			return username
-		}
-		s.ClientsMu.RUnlock()
-	}
+func (s *Server) generateUsername() string {
+	return gofakeit.Username()
 }
