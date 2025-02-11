@@ -60,8 +60,8 @@ func (s *Server) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.AddClient(client)
-	go s.writePump(client)            // Start the writePump in a separate goroutine to send messages
-	go s.readPump(client)             // Start the readPump in a separate goroutine to listen for incoming messages
+	go s.writePump(client) // Start the writePump in a separate goroutine to send messages
+	go s.readPump(client)  // Start the readPump in a separate goroutine to listen for incoming messages
 	s.BroadcastWelcomeMessage(client)
 
 	// Broadcast a join message
@@ -156,6 +156,43 @@ func (s *Server) writePump(c *Client) {
 		case <-c.Active:
 		}
 	}
+}
+
+func (s *Server) GetCientByID(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	fmt.Printf(id)
+
+	s.ClientsMu.RLock()
+	client, exists := s.Clients[id]
+	fmt.Println(client)
+
+	s.ClientsMu.RUnlock()
+
+	if !exists {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	response := map[string]string{"username": client.Username}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (s *Server) ListClients(w http.ResponseWriter, r *http.Request) {
+	s.ClientsMu.RLock()
+
+	var clients []map[string]string
+
+	for _, client := range s.Clients {
+		clients = append(clients, map[string]string{
+			"id":       client.ID,
+			"username": client.Username,
+		})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(clients)
+
+	s.ClientsMu.RUnlock()
 }
 
 func (s *Server) getClientList(excludeID string) []string {

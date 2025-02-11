@@ -59,6 +59,16 @@ go run main.go
 
 2. The server will start on the configured port (default: 8080)
 
+#### If using Docker
+
+```bash
+docker build -t optionx-assignment .
+```
+
+```bash
+docker run -p 8080:8080 optionx-assignment
+```
+
 ## API Reference
 
 ### WebSocket Endpoint

@@ -16,6 +16,9 @@ func main() {
 
 	// Handle WebSocket connections at the /ws endpoint
 	http.HandleFunc("/ws", s.HandleConnections)
+	http.HandleFunc("/clients", s.ListClients)
+
+	http.HandleFunc("/client/{id}", s.GetCientByID)
 
 	// Log a message indicating the server has started
 	log.Println("WebSockets server started on :8080")
